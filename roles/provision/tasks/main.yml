@@ -1,0 +1,16 @@
+---
+- name: Template the provisioning script
+  ansible.builtin.template:
+    src: fix-rivendell-user.sh.j2
+    dest: /root/fix-rivendell-user.sh
+    mode: "0700"
+
+# Not idempotent by design -- it drops and rebuilds the Rivendell
+# database from scratch. The /etc/rivendell-installer-provisioned
+# marker (touched at the end of the script) makes sure that only
+# happens once per host: re-running this playbook later (e.g. to pick
+# up a package update) won't wipe a station's live database.
+- name: Run the provisioning script (first run only)
+  ansible.builtin.command:
+    cmd: /root/fix-rivendell-user.sh
+    creates: /etc/rivendell-installer-provisioned

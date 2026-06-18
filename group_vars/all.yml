@@ -1,0 +1,48 @@
+---
+# Unprivileged account that owns the source checkout, does the actual
+# compile, and runs the desktop session (xrdp/MATE). Created if it
+# doesn't already exist. Anything that must run as root (useradd,
+# make install, systemctl) does so explicitly in the roles below --
+# Rivendell's own build system refuses to be compiled as root.
+#
+# Defaults to 'rd' -- the standard account name used throughout Fred
+# Gleason's own Rivendell installation tutorials, kept here so installs
+# built with this playbook stay consistent with that convention.
+# Override if your organization already has its own naming standard.
+rivendell_user: rd
+
+rivendell_home: "/home/{{ rivendell_user }}"
+
+# Hostname applied via hostnamectl + /etc/hosts. Override per-host in
+# inventory (host_vars/<host>.yml) when provisioning more than one box.
+rivendell_hostname: "{{ inventory_hostname }}"
+
+# Where to get the Rivendell source from, and which ref to build.
+# Defaults point at a private fork -- if you don't have read access to
+# it, override both with a repo you do have access to (e.g. the public
+# upstream, https://github.com/ElvishArtisan/rivendell.git).
+rivendell_git_repo: "git@github.com:anjeleno/rivendell.git"
+rivendell_git_ref: "v4"
+
+# Build configuration passed to ./configure. Matches the golden-image
+# build: standard global paths, rdxport debug symbols, docs skipped
+# (avoids needing a full DocBook toolchain).
+rivendell_configure_args:
+  - "--prefix=/usr"
+  - "--libdir=/usr/lib"
+  - "--libexecdir=/var/www/rd-bin"
+  - "--sysconfdir=/etc"
+  - "--enable-rdxport-debug"
+  - "--disable-docs"
+
+# Kernel module providing your sound hardware. snd_hda_intel matches
+# the Intel HDA device emulated by UTM/most cloud hypervisors. Override
+# per-host for physical hardware with a different audio chipset.
+rivendell_audio_kernel_module: snd_hda_intel
+
+# Optional: contents of a private SSH key (e.g. a read-only GitHub
+# deploy key for rivendell_git_repo above), supplied at runtime --
+# never commit a real value for this. Leave blank to skip key setup
+# entirely (e.g. when rivendell_git_repo is public, or the connecting
+# account already has its own git credentials configured).
+rivendell_deploy_key: ""

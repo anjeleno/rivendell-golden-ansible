@@ -1,0 +1,44 @@
+---
+- name: Install desktop and remote-access packages
+  ansible.builtin.apt:
+    name:
+      - ubuntu-mate-core
+      - mate-system-monitor
+      - xrdp
+      - dbus-x11
+    state: present
+
+- name: Set MATE as the default X session manager
+  community.general.alternatives:
+    name: x-session-manager
+    path: /usr/bin/mate-session
+
+- name: Restart xrdp
+  ansible.builtin.systemd:
+    name: xrdp
+    state: restarted
+    enabled: true
+
+- name: Symlink root's Xauthority to the build user's (fixes Qt5/XCB errors for root-run Rivendell tools under xrdp)
+  ansible.builtin.file:
+    src: "{{ rivendell_home }}/.Xauthority"
+    dest: /root/.Xauthority
+    state: link
+    force: true
+
+- name: Load the audio kernel module now
+  ansible.builtin.modprobe:
+    name: "{{ rivendell_audio_kernel_module }}"
+    state: present
+
+- name: Load the audio kernel module on every boot
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/rivendell-audio.conf
+    content: "{{ rivendell_audio_kernel_module }}\n"
+    mode: "0644"
+
+- name: Add the build user to the audio group
+  ansible.builtin.user:
+    name: "{{ rivendell_user }}"
+    groups: audio
+    append: true

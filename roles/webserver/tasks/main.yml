@@ -1,0 +1,27 @@
+---
+- name: Enable Apache CGI module (conf)
+  ansible.builtin.file:
+    src: ../mods-available/cgid.conf
+    dest: /etc/apache2/mods-enabled/cgid.conf
+    state: link
+    force: true
+
+- name: Enable Apache CGI module (load)
+  ansible.builtin.file:
+    src: ../mods-available/cgid.load
+    dest: /etc/apache2/mods-enabled/cgid.load
+    state: link
+    force: true
+
+- name: Link Rivendell's web config into Apache
+  ansible.builtin.file:
+    src: /etc/rd-bin.conf
+    dest: /etc/apache2/conf-enabled/rd-bin.conf
+    state: link
+    force: true
+
+- name: Restart Apache
+  ansible.builtin.systemd:
+    name: apache2
+    state: restarted
+    enabled: true

@@ -1,0 +1,42 @@
+---
+- name: Install git
+  ansible.builtin.apt:
+    name: git
+    state: present
+
+- name: Clone the Rivendell source tree
+  become_user: "{{ rivendell_user }}"
+  ansible.builtin.git:
+    repo: "{{ rivendell_git_repo }}"
+    dest: "{{ rivendell_home }}/rivendell"
+    version: "{{ rivendell_git_ref }}"
+    accept_hostkey: true
+
+- name: Run autogen.sh
+  become_user: "{{ rivendell_user }}"
+  ansible.builtin.command:
+    cmd: ./autogen.sh
+    chdir: "{{ rivendell_home }}/rivendell"
+    creates: "{{ rivendell_home }}/rivendell/configure"
+  environment:
+    DOCBOOK_STYLESHEETS: /usr/share/xml/docbook/stylesheet/docbook-xsl-ns
+
+- name: Run configure
+  become_user: "{{ rivendell_user }}"
+  ansible.builtin.command:
+    cmd: >
+      ./configure {{ rivendell_configure_args | join(' ') }}
+      MUSICBRAINZ_LIBS="-ldiscid -lmusicbrainz5cc -lcoverartcc"
+    chdir: "{{ rivendell_home }}/rivendell"
+    creates: "{{ rivendell_home }}/rivendell/Makefile"
+
+- name: Compile (make -j{{ ansible_processor_vcpus | default(2) }})
+  become_user: "{{ rivendell_user }}"
+  ansible.builtin.command:
+    cmd: "make -j{{ ansible_processor_vcpus | default(2) }}"
+    chdir: "{{ rivendell_home }}/rivendell"
+
+- name: Install compiled binaries
+  ansible.builtin.command:
+    cmd: make install
+    chdir: "{{ rivendell_home }}/rivendell"

@@ -1,0 +1,27 @@
+---
+- name: Install MariaDB
+  ansible.builtin.apt:
+    name:
+      - mariadb-server
+      - mariadb-client
+    state: present
+
+- name: Start and enable MariaDB
+  ansible.builtin.systemd:
+    name: mariadb
+    state: started
+    enabled: true
+
+# Equivalent of mariadb-secure-installation's interactive wizard, minus
+# "disallow remote root login" -- Ubuntu's default root@localhost
+# already uses the unix_socket auth plugin, which only works from a
+# local root shell to begin with, so there's nothing remote to disable.
+- name: Remove anonymous MariaDB users
+  ansible.builtin.command:
+    cmd: mysql -e "DELETE FROM mysql.user WHERE User=''; FLUSH PRIVILEGES;"
+  changed_when: false
+
+- name: Remove the test database
+  ansible.builtin.command:
+    cmd: mysql -e "DROP DATABASE IF EXISTS test;"
+  changed_when: false

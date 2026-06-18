@@ -1,0 +1,42 @@
+---
+# Only runs when rivendell_deploy_key is supplied (e.g. -e
+# @secrets.yml, or an Ansible Vault file). Skipped entirely when it's
+# blank -- e.g. rivendell_git_repo is public, or the build user already
+# has its own git credentials configured some other way.
+- name: Set up a dedicated deploy key for the Rivendell repo
+  when: rivendell_deploy_key | length > 0
+  block:
+    - name: Create .ssh directory for the build user
+      ansible.builtin.file:
+        path: "{{ rivendell_home }}/.ssh"
+        state: directory
+        owner: "{{ rivendell_user }}"
+        group: "{{ rivendell_user }}"
+        mode: "0700"
+
+    - name: Write the deploy private key
+      ansible.builtin.copy:
+        dest: "{{ rivendell_home }}/.ssh/rivendell_deploy_key"
+        content: "{{ rivendell_deploy_key }}"
+        owner: "{{ rivendell_user }}"
+        group: "{{ rivendell_user }}"
+        mode: "0600"
+
+    - name: Scope the deploy key to github.com via SSH config
+      ansible.builtin.blockinfile:
+        path: "{{ rivendell_home }}/.ssh/config"
+        create: true
+        owner: "{{ rivendell_user }}"
+        group: "{{ rivendell_user }}"
+        mode: "0600"
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - rivendell deploy key"
+        block: |
+          Host github.com
+            IdentityFile {{ rivendell_home }}/.ssh/rivendell_deploy_key
+            IdentitiesOnly yes
+
+    - name: Pre-trust github.com's host key
+      ansible.builtin.known_hosts:
+        name: github.com
+        key: "{{ lookup('pipe', 'ssh-keyscan -t ed25519 github.com') }}"
+        state: present

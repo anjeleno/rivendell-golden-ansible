@@ -1,0 +1,15 @@
+---
+# Full Rivendell golden-image provisioning, derived from the manual
+# golden-image.md build log. Targets a fresh Ubuntu 24.04 install --
+# Droplet, UTM VM, or physical hardware -- reachable as root (or any
+# sudo-capable account) over SSH, or run locally via ansible-pull.
+- hosts: all
+  become: true
+  roles:
+    - base
+    - desktop
+    - database
+    - deploy_key
+    - build
+    - webserver
+    - provision
