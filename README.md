@@ -16,6 +16,69 @@ on each one).
 Tested target: Ubuntu 24.04, on a DigitalOcean Droplet, a UTM VM, and
 physical hardware.
 
+## Quick start: DigitalOcean Droplet
+
+1. **Before copying:** by default this builds a private fork
+   (`anjeleno/rivendell`). If you don't have access to it, edit the
+   `RIVENDELL_GIT_REPO` line below first -- e.g. set it to
+   `https://github.com/ElvishArtisan/rivendell.git` (the public
+   upstream) -- or the build will fail at the git clone step. See
+   "Important" below for details.
+2. Copy the block below.
+3. DigitalOcean Droplet creation screen -> Advanced Options -> Add
+   Initialization Scripts, paste it in.
+4. Create the Droplet. It boots, installs Ansible, and provisions
+   itself automatically -- no SSH in required to kick it off.
+
+```bash
+#!/bin/bash
+# Entry point for unattended use: paste this into a cloud provider's
+# "User Data" / "Startup Script" field (e.g. DigitalOcean Droplet
+# creation -> Additional Options -> Startup scripts (Free), or run
+# it directly as root on a fresh Ubuntu 24.04 box (UTM VM, physical
+# hardware install). It installs Ansible, then uses `ansible-pull` to
+# fetch this repo and run site.yml against the local machine -- no
+# inbound SSH access or separate control node required.
+#
+# Fill in the variables below before using this script. Everything
+# else (build user, hostname, audio hardware, etc.) is configured in
+# group_vars/all.yml in this repo -- override any of it here too via
+# extra -e flags on the ansible-pull line at the bottom, if needed.
+set -euo pipefail
+
+# --- EDIT THESE -----------------------------------------------------
+# This installer repo itself (safe to leave as-is once published).
+INSTALLER_REPO="https://github.com/anjeleno/rivendell-golden-ansible.git"
+
+# Only needed if you want to override the defaults in group_vars/all.yml.
+RIVENDELL_GIT_REPO=""
+RIVENDELL_GIT_REF=""
+
+# Private deploy key for RIVENDELL_GIT_REPO, if it's a private repo.
+# Paste the entire key -- including the BEGIN/END lines -- between the
+# quotes below. Leave empty if the repo is public, or if this machine
+# already has its own working git credentials configured.
+RIVENDELL_DEPLOY_KEY=""
+# ----------------------------------------------------------------------
+
+apt-get update
+apt-get install -y --no-install-recommends git ansible
+
+extra_vars=()
+[ -n "$RIVENDELL_GIT_REPO" ] && extra_vars+=(-e "rivendell_git_repo=$RIVENDELL_GIT_REPO")
+[ -n "$RIVENDELL_GIT_REF" ] && extra_vars+=(-e "rivendell_git_ref=$RIVENDELL_GIT_REF")
+[ -n "$RIVENDELL_DEPLOY_KEY" ] && extra_vars+=(-e "rivendell_deploy_key=$RIVENDELL_DEPLOY_KEY")
+
+ansible-galaxy collection install community.general
+ansible-pull -U "$INSTALLER_REPO" -i "localhost," site.yml "${extra_vars[@]}"
+```
+
+This block is a copy of [`bootstrap.sh`](bootstrap.sh) in this repo --
+if you change one, change the other so they don't drift apart. For a
+UTM VM or physical box instead of a Droplet, download `bootstrap.sh`
+and run it as root the same way (`sudo bash bootstrap.sh`) instead of
+pasting it into a cloud provider's startup-script field.
+
 ## Important: this builds a specific git repo, which may be private
 
 `group_vars/all.yml` defaults `rivendell_git_repo` to a private fork.
