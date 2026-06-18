@@ -25,8 +25,7 @@ physical hardware.
    upstream) -- or the build will fail at the git clone step. See
    "Important" below for details.
 2. Copy the block below.
-3. DigitalOcean Droplet creation screen -> Advanced Options -> Add
-   Initialization Scripts, paste it in.
+3. DigitalOcean Droplet creation screen -> Additional Options -> Startup scripts (Free), paste it in.
 4. Create the Droplet. It boots, installs Ansible, and provisions
    itself automatically -- no SSH in required to kick it off.
 
@@ -71,6 +70,13 @@ extra_vars=()
 
 ansible-galaxy collection install community.general
 ansible-pull -U "$INSTALLER_REPO" -i "localhost," site.yml "${extra_vars[@]}"
+```
+## Watch the build progress
+
+SSH into your droplet and run the command:
+
+```
+sudo tail -f /var/log/cloud-init-output.log
 ```
 
 This block is a copy of [`bootstrap.sh`](bootstrap.sh) in this repo --
