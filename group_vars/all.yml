@@ -40,9 +40,12 @@ rivendell_configure_args:
 # per-host for physical hardware with a different audio chipset.
 rivendell_audio_kernel_module: snd_hda_intel
 
-# Optional: contents of a private SSH key (e.g. a read-only GitHub
+# Optional: path to a private SSH key file (e.g. a read-only GitHub
 # deploy key for rivendell_git_repo above), supplied at runtime --
-# never commit a real value for this. Leave blank to skip key setup
-# entirely (e.g. when rivendell_git_repo is public, or the connecting
-# account already has its own git credentials configured).
-rivendell_deploy_key: ""
+# never commit a real value for this. A file path, not the key content
+# itself: passing multi-line PEM content directly as an extra-var value
+# doesn't survive Ansible's whitespace-splitting CLI parsing. Leave
+# blank to skip key setup entirely (e.g. when rivendell_git_repo is
+# public, or the connecting account already has its own git
+# credentials configured).
+rivendell_deploy_key_path: ""

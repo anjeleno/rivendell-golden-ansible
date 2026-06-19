@@ -66,7 +66,16 @@ apt-get install -y --no-install-recommends git ansible
 extra_vars=()
 [ -n "$RIVENDELL_GIT_REPO" ] && extra_vars+=(-e "rivendell_git_repo=$RIVENDELL_GIT_REPO")
 [ -n "$RIVENDELL_GIT_REF" ] && extra_vars+=(-e "rivendell_git_ref=$RIVENDELL_GIT_REF")
-[ -n "$RIVENDELL_DEPLOY_KEY" ] && extra_vars+=(-e "rivendell_deploy_key=$RIVENDELL_DEPLOY_KEY")
+if [ -n "$RIVENDELL_DEPLOY_KEY" ]; then
+  # Written to a file rather than passed via -e: Ansible's plain
+  # key=value extra-vars parsing splits on whitespace (including
+  # newlines), which silently truncates a multi-line PEM key.
+  deploy_key_path="$(mktemp)"
+  chmod 600 "$deploy_key_path"
+  printf '%s\n' "$RIVENDELL_DEPLOY_KEY" > "$deploy_key_path"
+  trap 'rm -f "$deploy_key_path"' EXIT
+  extra_vars+=(-e "rivendell_deploy_key_path=$deploy_key_path")
+fi
 
 ansible-galaxy collection install community.general
 ansible-pull -U "$INSTALLER_REPO" -i "localhost," site.yml "${extra_vars[@]}"
@@ -131,14 +140,16 @@ whatever's (or isn't) in that file. It exists purely for Method 1.
 
 ## Private repo access
 
-`rivendell_deploy_key` (in `group_vars/all.yml`, or passed via
-`-e`/`bootstrap.sh`) is a private SSH key with read access to
-`rivendell_git_repo`. When set, the `deploy_key` role writes it to the
-build user's `~/.ssh/`, scoped to `github.com` only via `~/.ssh/config`
-so it's never used for anything else. Leave it blank if your repo is
-public, or if the box already has working git credentials some other
-way (e.g. you're running this from your own machine with an agent
-already forwarding your normal key).
+`rivendell_deploy_key_path` (in `group_vars/all.yml`, or passed via
+`-e`/`bootstrap.sh`) is a path to a private SSH key file with read
+access to `rivendell_git_repo` -- a file path, not the key content
+itself, since passing multi-line PEM content directly as an extra-var
+value doesn't survive Ansible's CLI parsing. When set, the
+`deploy_key` role copies it into the build user's `~/.ssh/`, scoped to
+`github.com` only via `~/.ssh/config` so it's never used for anything
+else. Leave it blank if your repo is public, or if the box already has
+working git credentials some other way (e.g. you're running this from
+your own machine with an agent already forwarding your normal key).
 
 **Never commit a real key into this repo.** Pass it at runtime, ideally
 via an Ansible Vault file (`ansible-playbook site.yml -e @secrets.yml

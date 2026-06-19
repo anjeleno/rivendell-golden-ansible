@@ -1,10 +1,16 @@
 ---
-# Only runs when rivendell_deploy_key is supplied (e.g. -e
-# @secrets.yml, or an Ansible Vault file). Skipped entirely when it's
-# blank -- e.g. rivendell_git_repo is public, or the build user already
-# has its own git credentials configured some other way.
+# Only runs when rivendell_deploy_key_path is supplied (e.g. by
+# bootstrap.sh, or -e rivendell_deploy_key_path=/path/to/key). Skipped
+# entirely when it's blank -- e.g. rivendell_git_repo is public, or the
+# build user already has its own git credentials configured some other
+# way.
+#
+# Takes a file path rather than the key content itself: Ansible's plain
+# key=value extra-vars parsing splits on whitespace (including
+# newlines), which silently truncates a multi-line PEM key passed
+# directly as a value. A file path sidesteps that entirely.
 - name: Set up a dedicated deploy key for the Rivendell repo
-  when: rivendell_deploy_key | length > 0
+  when: rivendell_deploy_key_path | default("") | length > 0
   block:
     - name: Create .ssh directory for the build user
       ansible.builtin.file:
@@ -16,8 +22,9 @@
 
     - name: Write the deploy private key
       ansible.builtin.copy:
+        src: "{{ rivendell_deploy_key_path }}"
         dest: "{{ rivendell_home }}/.ssh/rivendell_deploy_key"
-        content: "{{ rivendell_deploy_key }}"
+        remote_src: true
         owner: "{{ rivendell_user }}"
         group: "{{ rivendell_user }}"
         mode: "0600"

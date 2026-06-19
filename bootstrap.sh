@@ -34,7 +34,18 @@ apt-get install -y --no-install-recommends git ansible
 extra_vars=()
 [ -n "$RIVENDELL_GIT_REPO" ] && extra_vars+=(-e "rivendell_git_repo=$RIVENDELL_GIT_REPO")
 [ -n "$RIVENDELL_GIT_REF" ] && extra_vars+=(-e "rivendell_git_ref=$RIVENDELL_GIT_REF")
-[ -n "$RIVENDELL_DEPLOY_KEY" ] && extra_vars+=(-e "rivendell_deploy_key=$RIVENDELL_DEPLOY_KEY")
+if [ -n "$RIVENDELL_DEPLOY_KEY" ]; then
+  # Written to a file rather than passed via -e: Ansible's plain
+  # key=value extra-vars parsing splits on whitespace (including
+  # newlines) to support multiple pairs in one string, which silently
+  # truncates a multi-line PEM key to its first line. A file path has
+  # no such problem, and never echoes the key into any log.
+  deploy_key_path="$(mktemp)"
+  chmod 600 "$deploy_key_path"
+  printf '%s\n' "$RIVENDELL_DEPLOY_KEY" > "$deploy_key_path"
+  trap 'rm -f "$deploy_key_path"' EXIT
+  extra_vars+=(-e "rivendell_deploy_key_path=$deploy_key_path")
+fi
 
 ansible-galaxy collection install community.general
 ansible-pull -U "$INSTALLER_REPO" -i "localhost," site.yml "${extra_vars[@]}"
