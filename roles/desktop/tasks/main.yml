@@ -5,6 +5,7 @@
       - ubuntu-mate-core
       - mate-system-monitor
       - xrdp
+      - xorgxrdp
       - dbus-x11
     state: present
     install_recommends: false

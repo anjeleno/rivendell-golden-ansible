@@ -86,6 +86,8 @@
       - openssh-server
       - autoconf-archive
       - gnupg
+      - pbuilder
+      - ubuntu-dev-tools
       - apt-file
       - libmagick++-dev
       - docbook-xsl
