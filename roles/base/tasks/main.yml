@@ -25,13 +25,6 @@
     shell: /bin/bash
     create_home: true
 
-- name: Allow the build user passwordless sudo
-  ansible.builtin.copy:
-    dest: "/etc/sudoers.d/90-{{ rivendell_user }}"
-    content: "{{ rivendell_user }} ALL=(ALL) NOPASSWD:ALL\n"
-    mode: "0440"
-    validate: "visudo -cf %s"
-
 - name: Install build dependencies
   ansible.builtin.apt:
     name:
