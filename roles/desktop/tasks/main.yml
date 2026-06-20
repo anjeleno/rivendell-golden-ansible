@@ -7,6 +7,7 @@
       - xrdp
       - dbus-x11
     state: present
+    install_recommends: false
 
 - name: Set MATE as the default X session manager
   community.general.alternatives:

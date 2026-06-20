@@ -24,8 +24,9 @@ RIVENDELL_GIT_REF=""
 # This method has no real Ansible inventory (just -i "localhost,"), so
 # rivendell_hostname's default ({{ inventory_hostname }}) would resolve
 # to the literal string "localhost" and the base role would skip
-# setting it. Set a real hostname here if you want one applied.
-RIVENDELL_HOSTNAME=""
+# setting it. Defaults to "onair" -- override to name this box something
+# else.
+RIVENDELL_HOSTNAME="onair"
 
 # Private deploy key for RIVENDELL_GIT_REPO, if it's a private repo.
 # Paste the entire key -- including the BEGIN/END lines -- between the
