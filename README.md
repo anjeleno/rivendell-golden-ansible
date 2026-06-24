@@ -10,7 +10,7 @@ test tone, PulseAudio/ALSA handoff, and service enablement at boot.
 It's a direct translation of a manual golden-image build log, refined
 across several from-source installs to catch the gaps that the
 project's own `.deb` packaging normally papers over (see the comments
-in `roles/provision/templates/fix-rivendell-user.sh.j2` for the details
+in `roles/provision/templates/rivolution-first-run.sh.j2` for the details
 on each one).
 
 Tested target: Ubuntu 24.04, on a DigitalOcean Droplet, a UTM VM, and

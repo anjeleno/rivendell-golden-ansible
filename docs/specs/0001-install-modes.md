@@ -55,7 +55,7 @@ All three then build `/etc/rd.conf` from a template with
 `%MYSQL_HOSTNAME%`/`%MYSQL_LOGINNAME%`/`%MYSQL_PASSWORD%`/
 `%NFS_MOUNT_SOURCE%`/`%NFS_MOUNT_TYPE%` placeholders — directly
 analogous to what this playbook's own
-`roles/provision/templates/fix-rivendell-user.sh.j2` already does for
+`roles/provision/templates/rivolution-first-run.sh.j2` already does for
 `/etc/rd.conf`, just with more placeholders to fill in.
 
 ### A real simplification versus the original: no per-mode build split needed
@@ -128,7 +128,7 @@ Only for `rivendell_install_mode == client`:
 - Skip `roles/database` and the new server-only NFS-export tasks
   entirely (already covered by item 2's `when` gate).
 
-### 5. `provision` role (`fix-rivendell-user.sh.j2`): mode-aware `rd.conf`
+### 5. `provision` role (`rivolution-first-run.sh.j2`): mode-aware `rd.conf`
 
 This template currently always points `rd.conf` at a locally-generated
 password and `localhost`. Needs to branch:
