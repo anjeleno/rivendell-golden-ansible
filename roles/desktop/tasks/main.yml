@@ -1,8 +1,13 @@
 ---
-- name: Install desktop and remote-access packages
+- name: Install MATE desktop meta-package
+  ansible.builtin.apt:
+    name: "{{ 'task-mate-desktop' if rivolution_target_os == 'debian' else 'ubuntu-mate-core' }}"
+    state: present
+    install_recommends: false
+
+- name: Install remote-access packages
   ansible.builtin.apt:
     name:
-      - ubuntu-mate-core
       - mate-system-monitor
       - xrdp
       - xorgxrdp

@@ -33,6 +33,13 @@ rivolution_git_ref: "main"
 # per-host for physical hardware with a different audio chipset.
 rivolution_audio_kernel_module: snd_hda_intel
 
+# Auto-detected from the target's own /etc/os-release via Ansible
+# facts -- the OS is already knowable from the box itself, so there's
+# no need to ask. Override explicitly (e.g. via host_vars or -e) only
+# if ansible_distribution doesn't resolve to either name correctly on
+# some future target.
+rivolution_target_os: "{{ 'debian' if ansible_distribution == 'Debian' else 'ubuntu' }}"
+
 # Optional: path to a private SSH key file (e.g. a read-only GitHub
 # deploy key), supplied at runtime -- never commit a real value for
 # this. A file path, not the key content itself: passing multi-line

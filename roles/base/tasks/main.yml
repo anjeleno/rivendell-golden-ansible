@@ -35,6 +35,31 @@
     shell: /bin/bash
     create_home: true
 
+# deb-multimedia.org provides the non-free codec packages
+# (libmp3lame-dev/libtwolame-dev/etc.) that Ubuntu ships directly via
+# universe/multiverse but Debian's free-software policy excludes from
+# its own main repos. Must run before the package list below, which
+# depends on it for the Debian target.
+- name: Add the deb-multimedia repo (Debian only)
+  when: rivolution_target_os == 'debian'
+  block:
+    - name: Download the deb-multimedia keyring package
+      ansible.builtin.get_url:
+        url: https://www.deb-multimedia.org/pool/main/d/deb-multimedia-keyring/deb-multimedia-keyring_2024.9.1_all.deb
+        dest: /tmp/deb-multimedia-keyring.deb
+        mode: "0644"
+
+    - name: Install the deb-multimedia keyring
+      ansible.builtin.apt:
+        deb: /tmp/deb-multimedia-keyring.deb
+
+    - name: Add the deb-multimedia repo
+      ansible.builtin.apt_repository:
+        repo: "deb https://www.deb-multimedia.org {{ ansible_distribution_release }} main non-free"
+        filename: deb-multimedia
+        state: present
+        update_cache: true
+
 # Reconciled directly against rivolution.wiki's Build-From-Source
 # guide -- verified working on a real DigitalOcean droplet (Ubuntu
 # 24.04). Qt6, not Qt5 -- libqt5webkit5-dev has no Qt6 equivalent at
@@ -108,6 +133,18 @@
       - gnupg
       - pbuilder
       - apt-file
+    state: present
+
+# linux-modules-extra and ubuntu-dev-tools are literally Ubuntu-branded
+# -- linux-modules-extra-<kernel> doesn't exist as a separate package
+# on Debian (its audio/extra kernel modules ship in the base
+# linux-image package instead), and ubuntu-dev-tools has no Debian
+# equivalent at all (pbuilder itself, already installed above, is what
+# the build actually needs).
+- name: Install Ubuntu-only packages
+  ansible.builtin.apt:
+    name:
       - "linux-modules-extra-{{ ansible_kernel }}"
       - ubuntu-dev-tools
     state: present
+  when: rivolution_target_os == 'ubuntu'
