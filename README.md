@@ -1,4 +1,4 @@
-# Rivolution golden-image installer
+# Rivolution unified installer
 
 An Ansible playbook that provisions a fresh Ubuntu 24.04/26.04 or
 Debian Trixie machine (x64 or arm64) into a working Rivolution radio
@@ -46,7 +46,7 @@ set -euo pipefail
 
 # --- EDIT THESE -----------------------------------------------------
 # This installer repo itself (safe to leave as-is once published).
-INSTALLER_REPO="https://github.com/anjeleno/rivendell-golden-ansible.git"
+INSTALLER_REPO="https://github.com/anjeleno/rivolution-unified-installer.git"
 
 # Only needed if you want to override the defaults in group_vars/all.yml
 # (e.g. to point at your own fork instead of the public rivolution repo).

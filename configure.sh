@@ -138,7 +138,7 @@ else
     echo "# cloud provider's startup-script field, or run it as root on a fresh box."
     echo 'set -euo pipefail'
     echo
-    echo 'INSTALLER_REPO="https://github.com/anjeleno/rivendell-golden-ansible.git"'
+    echo 'INSTALLER_REPO="https://github.com/anjeleno/rivolution-unified-installer.git"'
     echo "RIVOLUTION_HOSTNAME=\"$hostname\""
     echo "RIVOLUTION_INSTALL_MODE=\"$install_mode\""
     echo "RIVOLUTION_REMOTE_MYSQL_HOST=\"$remote_mysql_host\""
