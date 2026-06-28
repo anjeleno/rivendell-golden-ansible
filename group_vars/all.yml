@@ -28,10 +28,12 @@ rivolution_hostname: "{{ inventory_hostname }}"
 rivolution_git_repo: "git@github.com:anjeleno/rivolution.git"
 rivolution_git_ref: "main"
 
-# Kernel module providing your sound hardware. snd_hda_intel matches
-# the Intel HDA device emulated by UTM/most cloud hypervisors. Override
-# per-host for physical hardware with a different audio chipset.
-rivolution_audio_kernel_module: snd_hda_intel
+# Kernel module providing your sound hardware. Left blank by default
+# so roles/desktop auto-detects it (AudioScience HPI vs UTM/cloud
+# hypervisor vs headless vs real ALSA hardware -- see roles/desktop for
+# the detection order). Set this explicitly only if detection picks the
+# wrong module for your hardware.
+rivolution_audio_kernel_module: ""
 
 # Auto-detected from the target's own /etc/os-release via Ansible
 # facts -- the OS is already knowable from the box itself, so there's

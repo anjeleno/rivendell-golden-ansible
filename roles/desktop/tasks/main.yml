@@ -47,16 +47,70 @@
     state: link
     force: true
 
+# Detection order (only consulted when rivolution_audio_kernel_module
+# is left blank -- an explicit override always wins):
+#   1. AudioScience HPI hardware -- best-effort, unverified against
+#      real HPI hardware (no tester available yet): detected by the
+#      asihpi kernel module already being loaded, or /dev/asihpi*
+#      device nodes existing. HPI is a proprietary vendor driver, not
+#      a generic ALSA snd_* module, so no module should be forced if
+#      detected here.
+#   2. UTM/QEMU/cloud hypervisor -- snd_hda_intel, matching the Intel
+#      HDA device most hypervisors emulate.
+#   3. No virtualization detected and no real ALSA cards present
+#      (headless cloud box with no virtual audio device at all) --
+#      snd-dummy, just so ALSA/caed have something to bind to.
+#   4. Otherwise, assume real ALSA hardware the kernel already
+#      auto-detected itself -- no module forced.
+- name: Detect AudioScience HPI hardware (best-effort, unverified)
+  ansible.builtin.shell: |
+    set -o pipefail
+    lsmod | grep -q '^asihpi ' || ls /dev/asihpi* >/dev/null 2>&1
+  args:
+    executable: /bin/bash
+  register: rivolution_hpi_detected
+  changed_when: false
+  failed_when: false
+  when: rivolution_audio_kernel_module | length == 0
+
+- name: Detect virtualization platform
+  ansible.builtin.command: systemd-detect-virt
+  register: rivolution_virt_detected
+  changed_when: false
+  failed_when: false
+  when: rivolution_audio_kernel_module | length == 0
+
+- name: Check for existing real ALSA sound cards
+  ansible.builtin.command: cat /proc/asound/cards
+  register: rivolution_asound_cards
+  changed_when: false
+  failed_when: false
+  when: rivolution_audio_kernel_module | length == 0
+
+- name: Determine the effective audio kernel module
+  ansible.builtin.set_fact:
+    rivolution_effective_audio_module: >-
+      {%- if rivolution_audio_kernel_module | length > 0 -%}
+      {{ rivolution_audio_kernel_module }}
+      {%- elif rivolution_hpi_detected.rc == 0 -%}
+      {%- elif rivolution_virt_detected.stdout | default('none') != 'none' -%}
+      snd_hda_intel
+      {%- elif (rivolution_asound_cards.stdout | default('')) is search('no soundcards') -%}
+      snd-dummy
+      {%- endif -%}
+
 - name: Load the audio kernel module now
   ansible.builtin.modprobe:
-    name: "{{ rivolution_audio_kernel_module }}"
+    name: "{{ rivolution_effective_audio_module }}"
     state: present
+  when: rivolution_effective_audio_module | default('') | length > 0
 
 - name: Load the audio kernel module on every boot
   ansible.builtin.copy:
     dest: /etc/modules-load.d/rivolution-audio.conf
-    content: "{{ rivolution_audio_kernel_module }}\n"
+    content: "{{ rivolution_effective_audio_module }}\n"
     mode: "0644"
+  when: rivolution_effective_audio_module | default('') | length > 0
 
 - name: Add the build user to the audio group
   ansible.builtin.user:
