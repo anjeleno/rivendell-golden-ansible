@@ -1,7 +1,8 @@
 # Rivolution golden-image installer
 
-An Ansible playbook that provisions a fresh Ubuntu 24.04 machine into a
-working Rivolution radio automation install, from source, end to end:
+An Ansible playbook that provisions a fresh Ubuntu 24.04/26.04 or
+Debian Trixie machine (x64 or arm64) into a working Rivolution radio
+automation install, from source, end to end:
 build dependencies, desktop/xrdp/MATE, MariaDB, compile + install,
 Apache/`rdxport.cgi` wiring, the `rivendell`/`pypad` system users and
 `/var/snd`, a freshly generated database password, schema + seed data +
@@ -13,8 +14,9 @@ project's own `.deb` packaging normally papers over (see the comments
 in `roles/provision/templates/rivolution-first-run.sh.j2` for the details
 on each one).
 
-Tested target: Ubuntu 24.04, on a DigitalOcean Droplet, a UTM VM, and
-physical hardware.
+Tested target: Ubuntu 24.04/26.04 (x64 and arm64), on a DigitalOcean
+Droplet, a UTM VM, and physical hardware. Debian Trixie is supported
+but not yet verified end to end on real hardware.
 
 ## Quick start: DigitalOcean Droplet
 
@@ -64,6 +66,20 @@ RIVOLUTION_HOSTNAME="onair"
 # using the public default, or if this machine already has its own
 # working git credentials configured.
 RIVOLUTION_DEPLOY_KEY=""
+
+# standalone | server | client -- see group_vars/all.yml for what each
+# mode actually does. Leave as standalone unless you're deliberately
+# building a multi-host deployment.
+RIVOLUTION_INSTALL_MODE="standalone"
+
+# Only used when RIVOLUTION_INSTALL_MODE=client -- a remote MySQL/
+# MariaDB host and the audio store's NFS host to point this box at,
+# instead of provisioning either locally.
+RIVOLUTION_REMOTE_MYSQL_HOST=""
+RIVOLUTION_REMOTE_MYSQL_USER="rduser"
+RIVOLUTION_REMOTE_MYSQL_DATABASE="Rivendell"
+RIVOLUTION_REMOTE_MYSQL_PASSWORD=""
+RIVOLUTION_REMOTE_NFS_HOST=""
 # ----------------------------------------------------------------------
 
 apt-get update
@@ -82,6 +98,7 @@ trap cleanup EXIT
 [ -n "$RIVOLUTION_GIT_REPO" ] && extra_vars+=(-e "rivolution_git_repo=$RIVOLUTION_GIT_REPO")
 [ -n "$RIVOLUTION_GIT_REF" ] && extra_vars+=(-e "rivolution_git_ref=$RIVOLUTION_GIT_REF")
 [ -n "$RIVOLUTION_HOSTNAME" ] && extra_vars+=(-e "rivolution_hostname=$RIVOLUTION_HOSTNAME")
+[ -n "$RIVOLUTION_INSTALL_MODE" ] && extra_vars+=(-e "rivolution_install_mode=$RIVOLUTION_INSTALL_MODE")
 
 if [ -n "$RIVOLUTION_DEPLOY_KEY" ]; then
   # Written to a file rather than passed via -e: Ansible's plain
@@ -94,7 +111,19 @@ if [ -n "$RIVOLUTION_DEPLOY_KEY" ]; then
   extra_vars+=(-e "rivolution_deploy_key_path=$deploy_key_path")
 fi
 
-ansible-galaxy collection install community.general
+[ -n "$RIVOLUTION_REMOTE_MYSQL_HOST" ] && extra_vars+=(-e "rivolution_remote_mysql_host=$RIVOLUTION_REMOTE_MYSQL_HOST")
+[ -n "$RIVOLUTION_REMOTE_MYSQL_USER" ] && extra_vars+=(-e "rivolution_remote_mysql_user=$RIVOLUTION_REMOTE_MYSQL_USER")
+[ -n "$RIVOLUTION_REMOTE_MYSQL_DATABASE" ] && extra_vars+=(-e "rivolution_remote_mysql_database=$RIVOLUTION_REMOTE_MYSQL_DATABASE")
+if [ -n "$RIVOLUTION_REMOTE_MYSQL_PASSWORD" ]; then
+  mysql_password_path="$(mktemp)"
+  chmod 600 "$mysql_password_path"
+  printf '%s\n' "$RIVOLUTION_REMOTE_MYSQL_PASSWORD" > "$mysql_password_path"
+  cleanup_paths+=("$mysql_password_path")
+  extra_vars+=(-e "rivolution_remote_mysql_password_path=$mysql_password_path")
+fi
+[ -n "$RIVOLUTION_REMOTE_NFS_HOST" ] && extra_vars+=(-e "rivolution_remote_nfs_host=$RIVOLUTION_REMOTE_NFS_HOST")
+
+ansible-galaxy collection install community.general ansible.posix
 ansible-pull -U "$INSTALLER_REPO" -i "localhost," site.yml "${extra_vars[@]}"
 ```
 
@@ -175,6 +204,20 @@ your own machine with an agent already forwarding your normal key).
 via an Ansible Vault file (`ansible-playbook site.yml -e @secrets.yml
 --ask-vault-pass`) rather than plain `-e` on the command line where
 it'd show up in shell history.
+
+## Install modes
+
+`rivolution_install_mode` (default `standalone`) picks one of three
+shapes:
+
+- **standalone** -- everything local: database, audio store, desktop.
+- **server** -- standalone, plus the database and audio store exposed
+  to other Rivendell hosts over NFS.
+- **client** -- only the Rivendell application itself, pointed at a
+  remote MySQL/MariaDB host and a remote NFS-mounted audio store
+  instead of provisioning either locally. Needs
+  `rivolution_remote_mysql_host`/`_user`/`_database`/
+  `_password_path` and `rivolution_remote_nfs_host` set.
 
 ## What's intentionally not automated
 

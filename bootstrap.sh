@@ -35,6 +35,20 @@ RIVOLUTION_HOSTNAME="onair"
 # using the public default, or if this machine already has its own
 # working git credentials configured.
 RIVOLUTION_DEPLOY_KEY=""
+
+# standalone | server | client -- see group_vars/all.yml for what each
+# mode actually does. Leave as standalone unless you're deliberately
+# building a multi-host deployment.
+RIVOLUTION_INSTALL_MODE="standalone"
+
+# Only used when RIVOLUTION_INSTALL_MODE=client -- a remote MySQL/
+# MariaDB host and the audio store's NFS host to point this box at,
+# instead of provisioning either locally.
+RIVOLUTION_REMOTE_MYSQL_HOST=""
+RIVOLUTION_REMOTE_MYSQL_USER="rduser"
+RIVOLUTION_REMOTE_MYSQL_DATABASE="Rivendell"
+RIVOLUTION_REMOTE_MYSQL_PASSWORD=""
+RIVOLUTION_REMOTE_NFS_HOST=""
 # ----------------------------------------------------------------------
 
 apt-get update
@@ -53,6 +67,7 @@ trap cleanup EXIT
 [ -n "$RIVOLUTION_GIT_REPO" ] && extra_vars+=(-e "rivolution_git_repo=$RIVOLUTION_GIT_REPO")
 [ -n "$RIVOLUTION_GIT_REF" ] && extra_vars+=(-e "rivolution_git_ref=$RIVOLUTION_GIT_REF")
 [ -n "$RIVOLUTION_HOSTNAME" ] && extra_vars+=(-e "rivolution_hostname=$RIVOLUTION_HOSTNAME")
+[ -n "$RIVOLUTION_INSTALL_MODE" ] && extra_vars+=(-e "rivolution_install_mode=$RIVOLUTION_INSTALL_MODE")
 
 if [ -n "$RIVOLUTION_DEPLOY_KEY" ]; then
   # Written to a file rather than passed via -e: Ansible's plain
@@ -67,5 +82,22 @@ if [ -n "$RIVOLUTION_DEPLOY_KEY" ]; then
   extra_vars+=(-e "rivolution_deploy_key_path=$deploy_key_path")
 fi
 
-ansible-galaxy collection install community.general
+[ -n "$RIVOLUTION_REMOTE_MYSQL_HOST" ] && extra_vars+=(-e "rivolution_remote_mysql_host=$RIVOLUTION_REMOTE_MYSQL_HOST")
+[ -n "$RIVOLUTION_REMOTE_MYSQL_USER" ] && extra_vars+=(-e "rivolution_remote_mysql_user=$RIVOLUTION_REMOTE_MYSQL_USER")
+[ -n "$RIVOLUTION_REMOTE_MYSQL_DATABASE" ] && extra_vars+=(-e "rivolution_remote_mysql_database=$RIVOLUTION_REMOTE_MYSQL_DATABASE")
+if [ -n "$RIVOLUTION_REMOTE_MYSQL_PASSWORD" ]; then
+  # Same file-path treatment as the deploy key, and for the same
+  # reason: passing a real secret as -e content directly would put it
+  # in `ps aux` output and potentially in Ansible's own verbose
+  # logging. The multi-line-PEM parsing bug doesn't apply to a plain
+  # password, but the exposure risk does.
+  mysql_password_path="$(mktemp)"
+  chmod 600 "$mysql_password_path"
+  printf '%s\n' "$RIVOLUTION_REMOTE_MYSQL_PASSWORD" > "$mysql_password_path"
+  cleanup_paths+=("$mysql_password_path")
+  extra_vars+=(-e "rivolution_remote_mysql_password_path=$mysql_password_path")
+fi
+[ -n "$RIVOLUTION_REMOTE_NFS_HOST" ] && extra_vars+=(-e "rivolution_remote_nfs_host=$RIVOLUTION_REMOTE_NFS_HOST")
+
+ansible-galaxy collection install community.general ansible.posix
 ansible-pull -U "$INSTALLER_REPO" -i "localhost," site.yml "${extra_vars[@]}"

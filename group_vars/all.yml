@@ -40,6 +40,23 @@ rivolution_audio_kernel_module: snd_hda_intel
 # some future target.
 rivolution_target_os: "{{ 'debian' if ansible_distribution == 'Debian' else 'ubuntu' }}"
 
+# standalone: database + audio store local only (default, unchanged
+#   from how this playbook has always behaved).
+# server: standalone, plus the database and audio store exposed to
+#   other Rivendell systems over the network (NFS export, wider DB
+#   grant).
+# client: only the Rivendell application itself -- no local database,
+#   no local audio store -- pointed at a remote MySQL/MariaDB host and
+#   a remote NFS-mounted audio store instead.
+rivolution_install_mode: standalone
+
+# Only consulted when rivolution_install_mode == client.
+rivolution_remote_mysql_host: ""
+rivolution_remote_mysql_user: "rduser"
+rivolution_remote_mysql_password_path: ""
+rivolution_remote_mysql_database: "Rivendell"
+rivolution_remote_nfs_host: ""
+
 # Optional: path to a private SSH key file (e.g. a read-only GitHub
 # deploy key), supplied at runtime -- never commit a real value for
 # this. A file path, not the key content itself: passing multi-line
