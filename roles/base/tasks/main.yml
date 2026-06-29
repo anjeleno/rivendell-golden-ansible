@@ -135,16 +135,44 @@
       - apt-file
     state: present
 
-# linux-modules-extra and ubuntu-dev-tools are literally Ubuntu-branded
-# -- linux-modules-extra-<kernel> doesn't exist as a separate package
-# on Debian (its audio/extra kernel modules ship in the base
-# linux-image package instead), and ubuntu-dev-tools has no Debian
-# equivalent at all (pbuilder itself, already installed above, is what
-# the build actually needs).
-- name: Install Ubuntu-only packages
+# ubuntu-dev-tools is literally Ubuntu-branded -- no Debian equivalent
+# at all (pbuilder itself, already installed above, is what the build
+# actually needs).
+- name: Install ubuntu-dev-tools (Ubuntu only)
   ansible.builtin.apt:
-    name:
-      - "linux-modules-extra-{{ ansible_kernel }}"
-      - ubuntu-dev-tools
+    name: ubuntu-dev-tools
     state: present
   when: rivolution_target_os == 'ubuntu'
+
+# linux-modules-extra-<kernel> also doesn't exist on Debian (its extra
+# audio/hardware kernel modules ship in the base linux-image package
+# instead there) -- but even on Ubuntu it's not guaranteed to exist for
+# every exact kernel build. Seen failing outright on a real ARM64
+# 26.04 box running kernel 7.0.0-22-generic, where the archive had no
+# matching linux-modules-extra package published for that build at
+# all. Checked via apt-cache rather than just letting apt fail, so a
+# missing optional extras package can't block the rest of this role --
+# this is just additional ALSA/hardware modules beyond what the base
+# kernel image ships, only relevant on real hardware to begin with.
+- name: Check whether linux-modules-extra is available for this kernel (Ubuntu only)
+  ansible.builtin.command:
+    cmd: apt-cache show "linux-modules-extra-{{ ansible_kernel }}"
+  register: linux_modules_extra_check
+  changed_when: false
+  failed_when: false
+  when: rivolution_target_os == 'ubuntu'
+
+- name: Install linux-modules-extra for this kernel (Ubuntu only)
+  ansible.builtin.apt:
+    name: "linux-modules-extra-{{ ansible_kernel }}"
+    state: present
+  when: rivolution_target_os == 'ubuntu' and linux_modules_extra_check.rc == 0
+
+- name: Warn that linux-modules-extra isn't available for this kernel (Ubuntu only)
+  ansible.builtin.debug:
+    msg: >-
+      linux-modules-extra-{{ ansible_kernel }} isn't published in the
+      configured repos for this exact kernel build -- continuing
+      without it. Only matters for extra ALSA/hardware modules beyond
+      what the base kernel image already ships.
+  when: rivolution_target_os == 'ubuntu' and linux_modules_extra_check.rc != 0
