@@ -210,8 +210,10 @@ if you're not, but re-running means answering every question again.
 
 ### Method 1: control node pushes to a target over SSH
 
-For a Droplet, UTM VM, or physical box that's already SSH-reachable as
-root (or any sudo-capable user), run this **from a separate machine**:
+Requires Ansible already installed on this machine
+(`sudo apt update && sudo apt install -y ansible`). For a Droplet, UTM
+VM, or physical box that's already SSH-reachable as root (or any
+sudo-capable user), run this **from a separate machine**:
 
 1. Add the target to `inventory/hosts.ini`.
 2. Install the required collections:
@@ -230,12 +232,16 @@ ansible-playbook site.yml
 
 This is the manual, by-hand equivalent of choosing "local" in
 [`./configure.sh`](configure.sh) -- not deprecated by it, just the
-non-interactive version. If you're already logged into the box (a
-fresh Droplet, UTM VM, or physical box you've SSH'd or console'd
-into), run this **on that same box**, as root or a user with
-passwordless `sudo` (prefix both commands below with `sudo` if you're
-not already root -- [`site.yml`](site.yml) uses `become: true`
-throughout, which needs one or the other to actually take effect):
+non-interactive version. Requires Ansible already installed on this
+box (`sudo apt update && sudo apt install -y ansible`) -- installed
+system-wide via `apt`, not via `pip install --user`, since `sudo`
+resets `PATH` and won't see a user-local install. If you're already
+logged into the box (a fresh Droplet, UTM VM, or physical box you've
+SSH'd or console'd into), run this **on that same box**, as root or a
+user with passwordless `sudo` (prefix both commands below with `sudo`
+if you're not already root -- [`site.yml`](site.yml) uses
+`become: true` throughout, which needs one or the other to actually
+take effect):
 
 1. Install the required collections:
 
