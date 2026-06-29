@@ -23,9 +23,12 @@ rivolution_home: "/home/{{ rivolution_user }}"
 rivolution_hostname: "{{ inventory_hostname }}"
 
 # Where to get the Rivolution source from, and which ref to build.
-# Public by default -- override these only if you're pointing this at
-# your own fork instead.
-rivolution_git_repo: "git@github.com:anjeleno/rivolution.git"
+# HTTPS, not SSH -- anjeleno/rivolution is public, so this clones
+# anonymously with no key needed at all. Only override these (and
+# switch to an SSH/git@ URL plus a deploy key, see "Private repo
+# access" in the README) if you're pointing this at your own private
+# fork instead.
+rivolution_git_repo: "https://github.com/anjeleno/rivolution.git"
 rivolution_git_ref: "main"
 
 # False by default: if rivolution_home/rivolution already exists with
