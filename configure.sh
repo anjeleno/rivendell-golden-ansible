@@ -79,6 +79,30 @@ if [ "$method" = "local" ] && [ "$EUID" -ne 0 ] && ! sudo -n true 2>/dev/null; t
   exit 1
 fi
 
+# Same fail-fast reasoning as the root check above -- ssh and local
+# both run ansible-galaxy/ansible-playbook directly (bootstrap mode
+# doesn't reach this script at all; its generated script apt-installs
+# ansible itself). A common trap: Ansible installed via
+# 'pip install --user ansible' lands in ~/.local/bin, which is on a
+# normal user's PATH but not root's -- sudo resets PATH (secure_path)
+# and won't see it, even though the same command works fine without
+# sudo as the same user.
+if [ "$method" != "bootstrap" ]; then
+  missing=()
+  command -v ansible-galaxy >/dev/null 2>&1 || missing+=(ansible-galaxy)
+  command -v ansible-playbook >/dev/null 2>&1 || missing+=(ansible-playbook)
+  if [ "${#missing[@]}" -gt 0 ]; then
+    echo "Error: missing from PATH: ${missing[*]}" >&2
+    if [ "$EUID" -eq 0 ] || [ -n "${SUDO_USER:-}" ]; then
+      echo "If Ansible is installed via 'pip install --user' for your normal account, sudo won't see it -- install it system-wide instead:" >&2
+    else
+      echo "Install Ansible first:" >&2
+    fi
+    echo "  sudo apt update && sudo apt install -y ansible" >&2
+    exit 1
+  fi
+fi
+
 install_mode="$(choose "Install mode" "standalone" \
   "standalone" \
   "server" \
