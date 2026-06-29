@@ -31,20 +31,43 @@ confirm() {
   [[ "$reply" =~ ^[Yy]([Ee][Ss])?$ ]]
 }
 
+choose() {
+  # choose "Prompt text" "default option" "opt1" "opt2" ... -> echoes
+  # the chosen option string. Prints a numbered menu and only accepts
+  # a number from that menu -- never the option text itself.
+  local prompt="$1" default="$2"; shift 2
+  local opts=("$@") i default_index=1 reply
+  for i in "${!opts[@]}"; do
+    [ "${opts[$i]}" = "$default" ] && default_index=$((i + 1))
+  done
+  echo "$prompt" >&2
+  for i in "${!opts[@]}"; do
+    echo "  $((i + 1)). ${opts[$i]}" >&2
+  done
+  read -r -p "Choice [$default_index]: " reply
+  reply="${reply:-$default_index}"
+  if ! [[ "$reply" =~ ^[1-9][0-9]*$ ]] || [ "$reply" -gt "${#opts[@]}" ]; then
+    echo "Unrecognized choice '$reply' -- enter a number from 1 to ${#opts[@]}." >&2
+    exit 1
+  fi
+  echo "${opts[$((reply - 1))]}"
+}
+
 echo "=== Rivolution unified installer setup ==="
 echo
 
-echo "Method 1: SSH into a box that's already running and reachable."
-echo "Method 2: generate a bootstrap.sh to paste into a cloud provider's"
-echo "          startup-script field before the box even exists."
+echo "ssh:       SSH into a box that's already running and reachable."
+echo "bootstrap: generate a bootstrap.sh to paste into a cloud provider's"
+echo "           startup-script field before the box even exists."
 echo
-method="$(ask "Method (1 or 2)" "1")"
+method="$(choose "How do you want to provision the target?" "ssh" \
+  "ssh" \
+  "bootstrap")"
 
-install_mode="$(ask "Install mode (standalone, server, or client)" "standalone")"
-case "$install_mode" in
-  standalone|server|client) ;;
-  *) echo "Unrecognized install mode '$install_mode' -- must be standalone, server, or client." >&2; exit 1 ;;
-esac
+install_mode="$(choose "Install mode" "standalone" \
+  "standalone" \
+  "server" \
+  "client")"
 
 build_user="$(ask "Build user" "rd")"
 
@@ -121,7 +144,7 @@ if [ -n "$remote_mysql_password" ]; then
   extra_vars+=(-e "rivolution_remote_mysql_password_path=$remote_mysql_password_path")
 fi
 
-if [ "$method" = "1" ]; then
+if [ "$method" = "ssh" ]; then
   echo
   target_host="$(ask "Target host (IP or hostname), already SSH-reachable")"
   target_user="$(ask "SSH user on the target (root, or any sudo-capable account)" "root")"
