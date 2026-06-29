@@ -92,14 +92,24 @@ if [ "$method" != "bootstrap" ]; then
   command -v ansible-galaxy >/dev/null 2>&1 || missing+=(ansible-galaxy)
   command -v ansible-playbook >/dev/null 2>&1 || missing+=(ansible-playbook)
   if [ "${#missing[@]}" -gt 0 ]; then
-    echo "Error: missing from PATH: ${missing[*]}" >&2
-    if [ "$EUID" -eq 0 ] || [ -n "${SUDO_USER:-}" ]; then
-      echo "If Ansible is installed via 'pip install --user' for your normal account, sudo won't see it -- install it system-wide instead:" >&2
+    if [ "$method" = "local" ]; then
+      # Safe to auto-install here, unprompted, the same way
+      # bootstrap.sh already does unconditionally: local mode only
+      # ever runs as root (checked above) against the target box
+      # itself, which this installer already requires to be Ubuntu/
+      # Debian -- apt is guaranteed to exist. ssh mode runs on
+      # whatever the control machine happens to be (could be macOS,
+      # Fedora, anything), so it stays manual below instead of
+      # assuming apt.
+      echo "Ansible not found -- installing it now (apt-get install -y ansible)..."
+      apt-get update
+      apt-get install -y --no-install-recommends ansible
     else
-      echo "Install Ansible first:" >&2
+      echo "Error: missing from PATH: ${missing[*]}" >&2
+      echo "Install Ansible on this control machine first:" >&2
+      echo "  sudo apt update && sudo apt install -y ansible" >&2
+      exit 1
     fi
-    echo "  sudo apt update && sudo apt install -y ansible" >&2
-    exit 1
   fi
 fi
 

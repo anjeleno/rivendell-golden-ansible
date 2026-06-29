@@ -207,6 +207,12 @@ anything runs unattended, every answer is already baked in.
 itself as root or with `sudo` from the start** -- it checks for this
 immediately after you pick that method and exits with a clear message
 if you're not, but re-running means answering every question again.
+If Ansible itself isn't installed yet, Method 2 installs it
+automatically at that same point (`apt-get install -y ansible`) -- safe
+to do unprompted there, since the target is already guaranteed to be
+Ubuntu/Debian and you're already root. Method 1, which runs on
+whatever your separate control machine happens to be, does not
+auto-install -- see its prerequisite note below.
 
 ### Method 1: control node pushes to a target over SSH
 
